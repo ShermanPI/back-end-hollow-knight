@@ -1,21 +1,42 @@
+from flask import Response, request, jsonify, session
 from backendHollow import app, mongo
-from flask import Response, request, jsonify
+from backendHollow.forms import RegistrationForm, LoginForm
 from bson import json_util
 from bson.objectid import ObjectId
+import secrets
+
+
+@app.route("/csrf_token")
+def csrf_token():
+    token = secrets.token_hex(16)
+    session['csrf_token'] = token
+    return jsonify({'csrf_token': token})
+    
+
+
+# @app.route("/", methods = ['POST'])
+# def index():
+#     form = RegistrationForm()
+#     if form.validate_on_submit():
+#         print(f'ea {form.username.data} \n {form.email.data} \n {form.hidden_tag()}')
+#     else:
+#         print(f'No se pudo validar {form.errors}')
+
+#     return render_template("index.html", form = form)
 
 
 @app.route("/characters", methods=['POST'])
 def addCharacter():
     payload = request.json
 
-    characterImgSrc = payload.get('characterImgSrc', "")
-    characterName = payload.get('characterName', "")
-    characterMainInfo = payload.get('characterMainInfo', "")
-    characterSecondaryInfo = payload.get('characterSecondaryInfo', "")
+    characterImgSrc = payload.get('imgSrc', "")
+    characterName = payload.get('name', "")
+    characterMainInfo = payload.get('mainInfo', "")
+    characterSecondaryInfo = payload.get('secondaryInfo', "")
 
     if characterImgSrc and characterName and characterMainInfo:
         id = mongo.db.characters.insert_one(
-            {"characterImgSrc": characterImgSrc, "characterName": characterName, "characterMainInfo": characterMainInfo, "characterSecondaryInfo": characterSecondaryInfo}
+            {"imgSrc": characterImgSrc, "name": characterName, "mainInfo": characterMainInfo, "secondaryInfo": characterSecondaryInfo}
         )
         
         response = {
@@ -23,10 +44,10 @@ def addCharacter():
             "status": "success",
             "data": {
                 "id": str(id.inserted_id),
-                "characterName": characterName,
-                "characterImgSrc": characterImgSrc,
-                "characterMainInfo": characterMainInfo,
-                "characterSecondaryInfo": characterSecondaryInfo
+                "name": characterName,
+                "imgSrc": characterImgSrc,
+                "mainInfo": characterMainInfo,
+                "secondaryInfo": characterSecondaryInfo
             }
         } 
 
@@ -62,20 +83,20 @@ def deleteCharacter(id):
 def updateUser(id):
     characterToUpdate = mongo.db.characters.find_one({"_id": ObjectId(id)})
 
-    characterName = request.json.get('characterName', characterToUpdate["characterName"])
-    characterImgSrc = request.json.get('characterImgSrc', characterToUpdate["characterImgSrc"])
-    characterMainInfo = request.json.get('characterMainInfo', characterToUpdate["characterMainInfo"])
-    characterSecondaryInfo = request.json.get('characterSecondaryInfo', characterToUpdate["characterSecondaryInfo"])
+    characterName = request.json.get('name', characterToUpdate["characterName"])
+    characterImgSrc = request.json.get('imgSrc', characterToUpdate["characterImgSrc"])
+    characterMainInfo = request.json.get('mainInfo', characterToUpdate["characterMainInfo"])
+    characterSecondaryInfo = request.json.get('secondaryInfo', characterToUpdate["characterSecondaryInfo"])
 
     mongo.db.characters.update_one({"_id": ObjectId(id)}, {"$set": {
-        "characterName": characterName, 
-        "characterImgSrc": characterImgSrc,
-        "characterMainInfo": characterMainInfo,
-        "characterSecondaryInfo": characterSecondaryInfo
+        "name": characterName, 
+        "imgSrc": characterImgSrc,
+        "mainInfo": characterMainInfo,
+        "secondaryInfo": characterSecondaryInfo
         }})
     
     response = jsonify({
-        'message': f'The characters with ID {id} has been updated successfully'
+        'message': f'The character with ID {id} has been updated successfully'
     })
 
     return response
