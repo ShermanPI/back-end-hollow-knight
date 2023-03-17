@@ -1,4 +1,4 @@
-from flask import Response, request, jsonify, session
+from flask import Response, request, jsonify, session, render_template
 from backendHollow import app, mongo
 from backendHollow.forms import RegistrationForm, LoginForm
 from bson import json_util
@@ -6,23 +6,21 @@ from bson.objectid import ObjectId
 import secrets
 
 
-@app.route("/csrf_token")
+@app.route("/csrf_token", methods = ["GET"])
 def csrf_token():
     token = secrets.token_hex(16)
     session['csrf_token'] = token
-    return jsonify({'csrf_token': token})
+    return jsonify({'csrfToken': token})
     
+@app.route("/", methods = ['POST', 'GET'])
+def index():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        print(f'ea {form.username.data} \n {form.email.data} \n {form.hidden_tag()}')
+    else:
+        print(f'No se pudo validar {form.errors}')
 
-
-# @app.route("/", methods = ['POST'])
-# def index():
-#     form = RegistrationForm()
-#     if form.validate_on_submit():
-#         print(f'ea {form.username.data} \n {form.email.data} \n {form.hidden_tag()}')
-#     else:
-#         print(f'No se pudo validar {form.errors}')
-
-#     return render_template("index.html", form = form)
+    return render_template("index.html", form = form)
 
 
 @app.route("/characters", methods=['POST'])
