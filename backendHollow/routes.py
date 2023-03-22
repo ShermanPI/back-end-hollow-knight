@@ -8,10 +8,24 @@ import secrets
 
 @app.route("/csrf_token", methods = ["GET"])
 def csrf_token():
-    token = secrets.token_hex(16)
-    session['csrf_token'] = token
+    form = RegistrationForm()
+    token = form.csrf_token.current_token
+    session['my_csrf_token'] = token
+    print("TOKEN ENVIADO AL FRONT:", session['my_csrf_token'])
     return jsonify({'csrfToken': token})
+
+
+@app.route("/register", methods = ["POST"])
+def register_user():
+    form = RegistrationForm(request.form)
     
+    if(form.validate_on_submit()):
+        print(form.csrf_token.data, "SE HA REGISTADOOOOOOOOOO")
+        return jsonify({'message': 'THE USER HAS BEEN SIGNED UP'})
+    else:
+        print("NO SE REGISTRO, TOKEN DEL FORMULARIO RECIBIDO: ", form.errors)
+        return jsonify({'message': 'NO'})
+
 @app.route("/", methods = ['POST', 'GET'])
 def index():
     form = RegistrationForm()
