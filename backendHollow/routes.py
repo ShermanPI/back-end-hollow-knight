@@ -1,30 +1,52 @@
 from flask import Response, request, jsonify, session, render_template
-from backendHollow import app, mongo
+from backendHollow import app, mongo, bcrypt
 from backendHollow.forms import RegistrationForm, LoginForm
 from bson import json_util
 from bson.objectid import ObjectId
 import secrets
 
-
 @app.route("/csrf_token", methods = ["GET"])
 def csrf_token():
-    form = RegistrationForm()
-    token = form.csrf_token.current_token
-    session['my_csrf_token'] = token
-    print("TOKEN ENVIADO AL FRONT:", session['my_csrf_token'])
+    token = secrets.token_hex(16)
+    session['form_csrf_token'] = token
     return jsonify({'csrfToken': token})
 
 
 @app.route("/register", methods = ["POST"])
 def register_user():
     form = RegistrationForm(request.form)
-    
-    if(form.validate_on_submit()):
-        print(form.csrf_token.data, "SE HA REGISTADOOOOOOOOOO")
-        return jsonify({'message': 'THE USER HAS BEEN SIGNED UP'})
+
+    if(form.csrf_token.data != session.get("form_csrf_token")):
+        if(form.validate_on_submit()):
+            username = form.username.data
+            email = form.email.data
+            hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
+
+            mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password})
+
+            return jsonify({
+                    'message': f'Account for "{form.username.data}" has been created... Welcome! now you can Log In',
+                    'user data': {
+                        'username': form.username.data,
+                        'email': form.email.data
+                    }
+                })
+        else:
+            return jsonify({
+                'message': 'The request could not be processed due to a client error, such as invalid or missing request data',
+                'error_list': form.errors
+            }), 400
     else:
-        print("NO SE REGISTRO, TOKEN DEL FORMULARIO RECIBIDO: ", form.errors)
-        return jsonify({'message': 'NO'})
+        return jsonify({
+            "message": "The csrf_token where not validated"
+        })
+
+
+@app.route("/users", methods = ["GET"])
+def get_users():
+    users_bson = mongo.db.users.find()
+    users = json_util.dumps(users_bson)
+    return Response(users, mimetype="application/json")
 
 @app.route("/", methods = ['POST', 'GET'])
 def index():
