@@ -22,11 +22,12 @@ def register_user():
             email = form.email.data
             hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
 
-            mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password})
+            user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password})
 
             return jsonify({
                     'message': f'Account for "{form.username.data}" has been created... Welcome! now you can Log In',
                     'user data': {
+                        'id': str(user.inserted_id), 
                         'username': form.username.data,
                         'email': form.email.data
                     }
@@ -34,13 +35,40 @@ def register_user():
         else:
             return jsonify({
                 'message': 'The request could not be processed due to a client error, such as invalid or missing request data',
-                'error_list': form.errors
+                'errors': form.errors
             }), 400
     else:
         return jsonify({
-            "message": "The csrf_token where not validated"
+            "message": "The csrf_token were not validated"
         })
 
+
+@app.route("/login", methods = ["POST"])
+def login_user():
+    form = LoginForm(request.form)
+    if(form.csrf_token.data != session.get("form_csrf_token")):
+        if form.validate_on_submit():
+            user = mongo.db.users.find_one({'username': form.username.data})
+            print("THE USER", user)
+
+            if user and bcrypt.check_password_hash(user.get('password'), form.password.data):
+                return jsonify({
+                    'message': f"User {form.username.data} has been Log In"
+                })
+            else:
+                return jsonify({
+                    'message': f"Login Unsusccesful. Please check username and password"
+                })
+        else:
+            print(form.errors)
+            return jsonify({
+                'message': 'The request could not be processed due to a client error, has ocurred an error with the form data',
+                'errors': form.errors
+            }), 400
+    else:
+        return jsonify({
+            "message": "The csrf_token were not validated"
+        })
 
 @app.route("/users", methods = ["GET"])
 def get_users():
