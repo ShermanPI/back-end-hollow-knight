@@ -1,4 +1,4 @@
-from flask import Response, request, jsonify, session, render_template
+from flask import make_response, request, jsonify, session, render_template
 from backendHollow import app, mongo, bcrypt
 from backendHollow.forms import RegistrationForm, LoginForm
 from bson import json_util
@@ -33,14 +33,14 @@ def register_user():
                     }
                 })
         else:
-            return jsonify({
-                'message': 'The request could not be processed due to a client error, such as invalid or missing request data',
-                'errors': form.errors
-            }), 400
+            response = make_response(jsonify({'errors': form.errors}))
+            response.status_code = 409
+
+            return response
     else:
         return jsonify({
             "message": "The csrf_token were not validated"
-        })
+        }), 401
 
 
 @app.route("/login", methods = ["POST"])
@@ -58,9 +58,8 @@ def login_user():
             else:
                 return jsonify({
                     'message': f"Login Unsusccesful. Please check username and password"
-                })
+                }), 400
         else:
-            print(form.errors)
             return jsonify({
                 'message': 'The request could not be processed due to a client error, has ocurred an error with the form data',
                 'errors': form.errors
@@ -68,13 +67,13 @@ def login_user():
     else:
         return jsonify({
             "message": "The csrf_token were not validated"
-        })
+        }), 401
 
 @app.route("/users", methods = ["GET"])
 def get_users():
     users_bson = mongo.db.users.find()
     users = json_util.dumps(users_bson)
-    return Response(users, mimetype="application/json")
+    return make_response(users, mimetype="application/json")
 
 @app.route("/", methods = ['POST', 'GET'])
 def index():
@@ -122,14 +121,14 @@ def getCharacters():
     characters = mongo.db.characters.find() #returns a BSON, and its a cursor
     response = json_util.dumps(characters)
 
-    return Response(response, mimetype="application/json")
+    return make_response(response, mimetype="application/json")
 
 @app.route("/characters/<id>", methods = ['GET'])
 def getCharacter(id):
     character_in_bson = mongo.db.characters.find_one({"_id": ObjectId(id)})
     character_in_bson_to_string = json_util.dumps(character_in_bson)
 
-    return Response(character_in_bson_to_string, mimetype="application/json")
+    return make_response(character_in_bson_to_string, mimetype="application/json")
 
 @app.route("/characters/<id>", methods = ["DELETE"])
 def deleteCharacter(id):
