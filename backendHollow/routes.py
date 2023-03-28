@@ -38,9 +38,10 @@ def register_user():
 
             return response
     else:
-        return jsonify({
-            "message": "The csrf_token were not validated"
-        }), 401
+        response = make_response(jsonify({"message": "The csrf_token were not validated"}))
+        response.status_code = 403
+        return response
+    
 
 
 @app.route("/login", methods = ["POST"])
