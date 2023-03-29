@@ -11,7 +11,6 @@ def csrf_token():
     session['form_csrf_token'] = token
     return jsonify({'csrfToken': token})
 
-
 @app.route("/register", methods = ["POST"])
 def register_user():
     form = RegistrationForm(request.form)
@@ -22,11 +21,11 @@ def register_user():
             email = form.email.data
             hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
 
-            user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password})
+            user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password, 'pfpId': 0, 'HScore': 0, 'unlockByTheUser': 0})
 
             return jsonify({
-                    'message': f'Account for "{form.username.data}" has been created... Welcome! now you can Log In',
-                    'user data': {
+                    'message': f'Account for <span class="points-required">{form.username.data}</span> has been created... Now you can Log In',
+                    'userData': {
                         'id': str(user.inserted_id), 
                         'username': form.username.data,
                         'email': form.email.data
@@ -38,9 +37,7 @@ def register_user():
 
             return response
     else:
-        response = make_response(jsonify({"message": "The csrf_token were not validated"}))
-        response.status_code = 403
-        return response
+        return forbidden()
     
 
 
@@ -50,25 +47,33 @@ def login_user():
     if(form.csrf_token.data != session.get("form_csrf_token")):
         if form.validate_on_submit():
             user = mongo.db.users.find_one({'username': form.username.data})
-            print("THE USER", user)
 
             if user and bcrypt.check_password_hash(user.get('password'), form.password.data):
+                if form.remember.data:
+                    session['authenticated_user'] = user
+
                 return jsonify({
-                    'message': f"User {form.username.data} has been Log In"
+                    'message': f"User {form.username.data} has been Loged In",
+                    'userData': user
                 })
             else:
-                return jsonify({
-                    'message': f"Login Unsusccesful. Please check username and password"
-                }), 400
-        else:
-            return jsonify({
-                'message': 'The request could not be processed due to a client error, has ocurred an error with the form data',
-                'errors': form.errors
-            }), 400
+                response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
+                response.status_code = 401
+                return response
     else:
-        return jsonify({
-            "message": "The csrf_token were not validated"
-        }), 401
+        return forbidden()
+
+@app.route("/login", methods = ["GET"])
+def verify_authenticated_user():
+    if 'authenticated_user' in session:
+        return jsonify({'user': session['authenticated_user']})
+    
+    return jsonify({'user': '{}'})
+
+@app.route('/logout')
+def logout():
+    session.pop('authenticated_user', None)
+    return jsonify({'message': 'The user logged out'})
 
 @app.route("/users", methods = ["GET"])
 def get_users():
@@ -78,7 +83,7 @@ def get_users():
 
 @app.route("/", methods = ['POST', 'GET'])
 def index():
-    form = RegistrationForm()
+    form = LoginForm()
     if form.validate_on_submit():
         print(f'ea {form.username.data} \n {form.email.data} \n {form.hidden_tag()}')
     else:
@@ -161,6 +166,12 @@ def updateUser(id):
         'message': f'The character with ID {id} has been updated successfully'
     })
 
+    return response
+
+@app.errorhandler(403)
+def forbidden(error = None):
+    response = make_response(jsonify({"message": "The csrf_token were not validated"}))
+    response.status_code = 403
     return response
 
 @app.errorhandler(400)
