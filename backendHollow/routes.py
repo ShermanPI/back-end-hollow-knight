@@ -52,28 +52,28 @@ def login_user():
                 if form.remember.data:
                     session['authenticated_user'] = user
 
-                return jsonify({
-                    'message': f"User {form.username.data} has been Loged In",
-                    'userData': user
-                })
-            else:
-                response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
-                response.status_code = 401
-                return response
+            return jsonify({
+                'message': f"User {form.username.data} has been Loged In",
+                'userData': json_util.dumps(user)
+            })
+        else:
+            response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
+            response.status_code = 401
+            return response
     else:
         return forbidden()
 
-@app.route("/login", methods = ["GET"])
-def verify_authenticated_user():
-    if 'authenticated_user' in session:
-        return jsonify({'user': session['authenticated_user']})
+# @app.route("/login", methods = ["GET"])
+# def verify_authenticated_user():
+#     if 'authenticated_user' in session:
+#         return jsonify({'user': session['authenticated_user']})
     
-    return jsonify({'user': '{}'})
+#     return jsonify({'user': '{}'})
 
-@app.route('/logout')
-def logout():
-    session.pop('authenticated_user', None)
-    return jsonify({'message': 'The user logged out'})
+# @app.route('/logout')
+# def logout():
+#     session.pop('authenticated_user', None)
+#     return jsonify({'message': 'The user logged out'})
 
 @app.route("/users", methods = ["GET"])
 def get_users():
@@ -118,7 +118,7 @@ def addCharacter():
             }
         } 
 
-        return response
+        return jsonify(response)
     else:
         return bad_request()
 
