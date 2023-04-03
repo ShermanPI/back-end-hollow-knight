@@ -21,7 +21,7 @@ def register_user():
             email = form.email.data
             hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
 
-            user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password, 'pfpId': 0, 'HScore': 0, 'unlockByTheUser': 0})
+            user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password, 'pfpId': 0, 'HScore': 0, 'unlockByTheUser': 0, 'type': "user"})
 
             return jsonify({
                     'message': f'Account for <span class="points-required">{form.username.data}</span> has been created... Now you can Log In',
@@ -48,31 +48,45 @@ def login_user():
         if form.validate_on_submit():
             user = mongo.db.users.find_one({'username': form.username.data})
 
-            if user and bcrypt.check_password_hash(user.get('password'), form.password.data):
+            if user and bcrypt.check_password_hash(user['password'], form.password.data):
                 if form.remember.data:
-                    session['authenticated_user'] = user
+                    session['loged_user'] = "user jijija"
 
-            return jsonify({
-                'message': f"User {form.username.data} has been Loged In",
-                'userData': json_util.dumps(user)
-            })
+                return jsonify({
+                    'message': f"User {form.username.data} has been Loged In",
+                    'userData': {
+                        "id": str(user["_id"]),
+                        "username": user["username"],
+                        "pfpId": user["pfpId"],
+                        "HScore": user["HScore"],
+                        "unlockByTheUser": user["unlockByTheUser"]
+                        }
+                })
+            else:
+
+                response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
+                response.status_code = 401
+                return response
         else:
-            response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
-            response.status_code = 401
-            return response
+            return bad_request()
     else:
         return forbidden()
 
-# @app.route("/login", methods = ["GET"])
-# def verify_authenticated_user():
-#     if 'authenticated_user' in session:
-#         return jsonify({'user': session['authenticated_user']})
+
+@app.route("/loginiu", methods = ["GET"])
+def loged_user():
+    print(type(session))
+    if 'loged_user' in session:
+        user = session['loged_user']
+        return jsonify({'user': user})
     
-#     return jsonify({'user': '{}'})
+    return jsonify({
+        'user': "nothing here"
+        })
 
 # @app.route('/logout')
 # def logout():
-#     session.pop('authenticated_user', None)
+#     session.pop('loged_user', None)
 #     return jsonify({'message': 'The user logged out'})
 
 @app.route("/users", methods = ["GET"])
