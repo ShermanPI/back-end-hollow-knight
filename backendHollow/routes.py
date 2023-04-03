@@ -13,9 +13,10 @@ def csrf_token():
 
 @app.route("/register", methods = ["POST"])
 def register_user():
+    print("WUO WUOWUWOWUOW WUOWUWO", session)
     form = RegistrationForm(request.form)
-
-    if(form.csrf_token.data != session.get("form_csrf_token")):
+    print("EA EA EASSASSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSXAS: ", form.csrf_token.data, session["form_csrf_token"])
+    if(form.csrf_token.data == session["form_csrf_token"]):
         if(form.validate_on_submit()):
             username = form.username.data
             email = form.email.data
@@ -44,13 +45,13 @@ def register_user():
 @app.route("/login", methods = ["POST"])
 def login_user():
     form = LoginForm(request.form)
-    if(form.csrf_token.data != session.get("form_csrf_token")):
+    if(form.csrf_token.data == session.get("form_csrf_token")):
         if form.validate_on_submit():
             user = mongo.db.users.find_one({'username': form.username.data})
 
             if user and bcrypt.check_password_hash(user['password'], form.password.data):
                 if form.remember.data:
-                    session['loged_user'] = "user jijija"
+                    session['loged_user'] = json_util.dumps(user)
 
                 return jsonify({
                     'message': f"User {form.username.data} has been Loged In",
@@ -73,21 +74,20 @@ def login_user():
         return forbidden()
 
 
-@app.route("/loginiu", methods = ["GET"])
+@app.route("/login", methods = ["GET"])
 def loged_user():
-    print(type(session))
     if 'loged_user' in session:
         user = session['loged_user']
-        return jsonify({'user': user})
+        return user
     
     return jsonify({
-        'user': "nothing here"
+        'user': {}
         })
 
-# @app.route('/logout')
-# def logout():
-#     session.pop('loged_user', None)
-#     return jsonify({'message': 'The user logged out'})
+@app.route('/logout')
+def logout():
+    session.pop('loged_user', None)
+    return jsonify({'message': 'The user logged out'})
 
 @app.route("/users", methods = ["GET"])
 def get_users():
