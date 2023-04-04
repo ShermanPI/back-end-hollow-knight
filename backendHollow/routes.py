@@ -13,9 +13,7 @@ def csrf_token():
 
 @app.route("/register", methods = ["POST"])
 def register_user():
-    print("WUO WUOWUWOWUOW WUOWUWO", session)
     form = RegistrationForm(request.form)
-    print("EA EA EASSASSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSXAS: ", form.csrf_token.data, session["form_csrf_token"])
     if(form.csrf_token.data == session["form_csrf_token"]):
         if(form.validate_on_submit()):
             username = form.username.data
@@ -28,8 +26,7 @@ def register_user():
                     'message': f'Account for <span class="points-required">{form.username.data}</span> has been created... Now you can Log In',
                     'userData': {
                         'id': str(user.inserted_id), 
-                        'username': form.username.data,
-                        'email': form.email.data
+                        'username': form.username.data
                     }
                 })
         else:
@@ -41,7 +38,6 @@ def register_user():
         return forbidden()
     
 
-
 @app.route("/login", methods = ["POST"])
 def login_user():
     form = LoginForm(request.form)
@@ -51,11 +47,11 @@ def login_user():
 
             if user and bcrypt.check_password_hash(user['password'], form.password.data):
                 if form.remember.data:
-                    session['loged_user'] = json_util.dumps(user)
+                    session['loged_user'] = json_util.dumps(mongo.db.users.find_one({'username': form.username.data}, {'password': 0}))
 
                 return jsonify({
                     'message': f"User {form.username.data} has been Loged In",
-                    'userData': {
+                    'user': {
                         "id": str(user["_id"]),
                         "username": user["username"],
                         "pfpId": user["pfpId"],
@@ -89,9 +85,14 @@ def logout():
     session.pop('loged_user', None)
     return jsonify({'message': 'The user logged out'})
 
+@app.route("/user/<id>")
+def getUser(id):
+    user = mongo.db.users.find_one({"_id": ObjectId(id)}, {'password': 0})
+    return json_util.dumps(user)
+
 @app.route("/users", methods = ["GET"])
 def get_users():
-    users_bson = mongo.db.users.find()
+    users_bson = mongo.db.users.find({}, {'password': 0})
     users = json_util.dumps(users_bson)
     return make_response(users, mimetype="application/json")
 
