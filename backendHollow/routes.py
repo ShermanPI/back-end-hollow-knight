@@ -85,14 +85,41 @@ def logout():
     session.pop('loged_user', None)
     return jsonify({'message': 'The user logged out'})
 
-@app.route("/user/<id>")
+@app.route("/user/<id>", methods=['GET'])
 def getUser(id):
     user = mongo.db.users.find_one({"_id": ObjectId(id)}, {'password': 0})
     return json_util.dumps(user)
 
+@app.route("/user/<id>", methods=['PUT'])
+def update_user(id):
+    payload = request.json
+    user = mongo.db.users.find_one({"_id": ObjectId(id)})
+
+    if(payload.get("username", None)):
+        userFinded = mongo.db.users.find_one({"username": payload.get("username")})
+
+        if(userFinded):
+            return jsonify({"message": "This username is already in Use. Please choose another one"}), 409
+    
+    if(payload.get("email", None)):
+        emailFinded = mongo.db.users.find_one({"email": payload.get("email", None)})
+        if(emailFinded):
+            return jsonify({"message": "This email is already in Use. Please choose another one"}), 409
+
+    user_username = payload.get("username", user["username"])
+    user_email = payload.get("email", user["email"])
+    user_pfp_id = payload.get("pfpId", user["pfpId"])
+    user_HScore = payload.get("HScore", user["HScore"])
+    user_unlocklByTheUser = payload.get("unlockByTheUser", user["unlockByTheUser"])
+    user_type =  payload.get("type", user["type"])
+
+    mongo.db.users.update_one({"_id": ObjectId(id)}, {"$set": {"username": user_username, "email": user_email, "pfpId": user_pfp_id, "HScore": user_HScore, "unlockByTheUser": user_unlocklByTheUser, "type": user_type}})
+
+    return jsonify({'message': 'User info has been updated'})
+
 @app.route("/users", methods = ["GET"])
 def get_users():
-    users_bson = mongo.db.users.find({}, {'password': 0})
+    users_bson = mongo.db.users.find({}, {'password': 0, 'email': 0})
     users = json_util.dumps(users_bson)
     return make_response(users, mimetype="application/json")
 
