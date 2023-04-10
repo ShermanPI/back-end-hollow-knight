@@ -8,18 +8,25 @@
 </head>
 <body>
 <form method="POST" action="">
+    {{ form.hidden_tag() }}
 
-
-    {{ form.username.label }}
-    {{ form.username }}
+    {{ form.characterImgSrc.label }}
+    {{ form.characterImgSrc }}
     
     <hr>
-    {{ form.remember.label }}
-    {{ form.remember }}
+    {{ form.characterName.label }}
+    {{ form.characterName }}
+
+    <hr>
+    {{ form.characterMainInfo.label }}
+    {{ form.characterMainInfo }}
+
+    <hr>
+    {{ form.characterSecondaryInfo.label }}
+    {{ form.characterSecondaryInfo }}
     
     <hr>
     {{ form.submit }}
-    {{ form.hidden_tag() }}
 </form>
 
 
