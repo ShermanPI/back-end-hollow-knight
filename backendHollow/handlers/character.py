@@ -1,8 +1,21 @@
+import secrets
+import os
 from flask import make_response, request, jsonify, session
 from backendHollow import app, mongo
 from backendHollow.forms import createCharacterForm
 from bson import json_util
 from bson.objectid import ObjectId
+
+
+
+def save_picture(form_picture):
+    random_hex = secrets.token_hex(8)
+    f_name, f_extention = os.path.splitext(form_picture.filename)
+    picture_filename = random_hex + f_extention
+    picture_path = os.path.join(app.root_path, 'static/characters-images', picture_filename)
+    form_picture.save(picture_path)
+    return picture_filename
+
 
 @app.route("/characters", methods = ["POST"])
 def addCharacter():
@@ -11,7 +24,9 @@ def addCharacter():
     print(form.csrf_token.data, " SHAKJSDBN ", session["form_csrf_token"])
     if(form.csrf_token.data == session.get("form_csrf_token")):
         if(form.validate_on_submit()):
-            newCharacter = mongo.db.characters.insert_one({'characterName': form.characterName.data, 'characterMainInfo': form.characterMainInfo.data, 'characterSecondaryInfo': form.characterSecondaryInfo.data, 'characterImgSrc': "HOLA.png"})
+            picture_file = save_picture(request.files['characterImgSrc'])
+
+            newCharacter = mongo.db.characters.insert_one({'characterName': form.characterName.data, 'characterMainInfo': form.characterMainInfo.data, 'characterSecondaryInfo': form.characterSecondaryInfo.data, 'characterImgSrc': picture_file})
             character = mongo.db.characters.find_one({'id': ObjectId(newCharacter.inserted_id)})
             return jsonify({
                 'message': f"The character {form.characterName.data} has been added",

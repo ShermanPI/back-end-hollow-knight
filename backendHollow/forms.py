@@ -1,7 +1,7 @@
 from backendHollow import mongo
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import StringField, PasswordField,SubmitField, HiddenField, BooleanField, TextAreaField
+from wtforms import StringField, PasswordField,SubmitField, HiddenField, BooleanField, TextAreaField, Field
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 
 class RegistrationForm(FlaskForm):
@@ -34,7 +34,7 @@ class createCharacterForm(FlaskForm):
     characterMainInfo = TextAreaField("Character Main Info", validators=[DataRequired()])
     characterSecondaryInfo = TextAreaField("character Secondary Info")
     csrf_token = HiddenField("csrf_token")
-    # characterImgSrc = FileField('Character Image', validators=[FileRequired(), FileAllowed(['png', 'jpeg', 'webp', 'jpg'])]) ---- This doesnt work so im using the request.files to search my file submited
+    # characterImgSrc = Field('Character Image') # This doesnt work so im using the request.files to search my file submited validators=[FileRequired(), FileAllowed(['png', 'jpeg', 'webp', 'jpg'])]
     submit = SubmitField('Create')
 
     def validate_characterName(self, characterName):
