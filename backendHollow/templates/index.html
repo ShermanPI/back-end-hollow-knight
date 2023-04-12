@@ -7,27 +7,8 @@
     <title>Document</title>
 </head>
 <body>
-<form method="POST" action="">
-    {{ form.hidden_tag() }}
+    <img src="{{ url_for('static', filename='characters-images/' + '3bc16c1ef0ab5670.png') }}" alt="">
 
-    {{ form.characterImgSrc.label }}
-    {{ form.characterImgSrc }}
-    
-    <hr>
-    {{ form.characterName.label }}
-    {{ form.characterName }}
-
-    <hr>
-    {{ form.characterMainInfo.label }}
-    {{ form.characterMainInfo }}
-
-    <hr>
-    {{ form.characterSecondaryInfo.label }}
-    {{ form.characterSecondaryInfo }}
-    
-    <hr>
-    {{ form.submit }}
-</form>
 
 
 </body>

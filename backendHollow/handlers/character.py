@@ -1,6 +1,6 @@
 import secrets
 import os
-from flask import make_response, request, jsonify, session
+from flask import make_response, request, jsonify, session, url_for
 from backendHollow import app, mongo
 from backendHollow.forms import createCharacterForm
 from bson import json_util
@@ -40,6 +40,13 @@ def addCharacter():
     else:
         return forbidden()
 
+@app.route("/characters", methods = ['GET'])
+def getCharacters():
+    characters = mongo.db.characters.aggregate([{"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
+    response = json_util.dumps(characters)
+
+    return make_response(response)
+
 # @app.route("/characters", methods=['POST'])
 # def addCharacter():
 #     payload = request.json
@@ -69,13 +76,6 @@ def addCharacter():
 #         return jsonify(response)
 #     else:
 #         return bad_request()
-
-@app.route("/characters", methods = ['GET'])
-def getCharacters():
-    characters = mongo.db.characters.find() #returns a BSON, and its a cursor
-    response = json_util.dumps(characters)
-
-    return make_response(response, mimetype="application/json")
 
 @app.route("/characters/<id>", methods = ['GET'])
 def getCharacter(id):
