@@ -47,6 +47,13 @@ def getCharacters():
 
     return make_response(response)
 
+@app.route("/charactersSample/<int:sample_size>", methods = ['GET'])
+def getCharactersSample(sample_size):
+    characters = mongo.db.characters.aggregate([{"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
+    response = json_util.dumps(characters)
+
+    return make_response(response)
+
 # @app.route("/characters", methods=['POST'])
 # def addCharacter():
 #     payload = request.json

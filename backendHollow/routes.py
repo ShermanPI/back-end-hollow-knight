@@ -11,9 +11,9 @@ def csrf_token():
     return jsonify({'csrfToken': token})
 
 
-@app.route("/", methods = ['POST', 'GET'])
-def index():
-    # form = createCharacterForm()
-    return render_template("index.html")
+# @app.route("/", methods = ['POST', 'GET'])
+# def index():
+#     # form = createCharacterForm()
+#     return render_template("index.html")
 
 from backendHollow.handlers import character, user
