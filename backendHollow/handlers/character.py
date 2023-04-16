@@ -1,11 +1,11 @@
 import secrets
 import os
+import json
 from flask import make_response, request, jsonify, session, url_for
 from backendHollow import app, mongo
 from backendHollow.forms import createCharacterForm
 from bson import json_util
 from bson.objectid import ObjectId
-
 
 
 def save_picture(form_picture):
@@ -47,10 +47,18 @@ def getCharacters():
 
     return make_response(response)
 
-@app.route("/charactersSample/<int:sample_size>", methods = ['GET'])
+@app.route("/charactersSample/<int:sample_size>", methods = ['GET', 'POST'])
 def getCharactersSample(sample_size):
-    characters = mongo.db.characters.aggregate([{"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
+    print("Antes de la validacion", request.method)
+
+    if request.method == 'POST':
+        already_rendered = request.json['items']
+        characters = mongo.db.characters.aggregate([{"$match": {"characterName": {"$nin": already_rendered}}}, {"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
+    else:
+        characters = mongo.db.characters.aggregate([{"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
+
     response = json_util.dumps(characters)
+    print("RESPONSEEEEEEEEEEEEEEEEEEEEEEEEEEE ", response)
 
     return make_response(response)
 
