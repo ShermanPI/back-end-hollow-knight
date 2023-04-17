@@ -14,7 +14,7 @@ def register_user():
             email = form.email.data
             hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
 
-            user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password, 'pfpId': 0, 'HScore': 0, 'unlockByTheUser': 0, 'type': "user"})
+            user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password, 'pfpId': 0, 'HScore': 0, 'unlockByTheUser': 0, 'type': "user", 'favoriteCharacters': []})
 
             return jsonify({
                     'message': f'Account for <span class="points-required">{form.username.data}</span> has been created... Now you can Log In',

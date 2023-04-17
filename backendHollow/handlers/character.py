@@ -49,8 +49,6 @@ def getCharacters():
 
 @app.route("/charactersSample/<int:sample_size>", methods = ['GET', 'POST'])
 def getCharactersSample(sample_size):
-    print("Antes de la validacion", request.method)
-
     if request.method == 'POST':
         already_rendered = request.json['items']
         characters = mongo.db.characters.aggregate([{"$match": {"characterName": {"$nin": already_rendered}}}, {"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
@@ -58,39 +56,50 @@ def getCharactersSample(sample_size):
         characters = mongo.db.characters.aggregate([{"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
 
     response = json_util.dumps(characters)
-    print("RESPONSEEEEEEEEEEEEEEEEEEEEEEEEEEE ", response)
 
     return make_response(response)
 
-# @app.route("/characters", methods=['POST'])
-# def addCharacter():
-#     payload = request.json
+@app.route("/characters/favorite/<string:characterName>", methods = ['POST'])
+def addFavorite(characterName):
+    # print(session['loged_user'], characterName)
+    loged_user = json.loads(session['loged_user'])['username']
+    favorite_characters_in_db = mongo.db.users.find_one({'username': loged_user})['favoriteCharacters']
+    favorite_characters_in_db.append(characterName)
+    print(favorite_characters_in_db)
 
-#     characterImgSrc = payload.get('imgSrc', "")
-#     characterName = payload.get('name', "")
-#     characterMainInfo = payload.get('mainInfo', "")
-#     characterSecondaryInfo = payload.get('secondaryInfo', "")
+    mongo.db.users.update_one({'username': loged_user}, {'$set': {'favoriteCharacters': favorite_characters_in_db}})
 
-#     if characterImgSrc and characterName and characterMainInfo:
-#         id = mongo.db.characters.insert_one(
-#             {"imgSrc": characterImgSrc, "name": characterName, "mainInfo": characterMainInfo, "secondaryInfo": characterSecondaryInfo}
-#         )
-        
-#         response = {
-#             "message": "Character created succesfully",
-#             "status": "success",
-#             "data": {
-#                 "id": str(id.inserted_id),
-#                 "name": characterName,
-#                 "imgSrc": characterImgSrc,
-#                 "mainInfo": characterMainInfo,
-#                 "secondaryInfo": characterSecondaryInfo
-#             }
-#         } 
+    return jsonify({"message": F'{characterName} added as favorite'})
 
-#         return jsonify(response)
-#     else:
-#         return bad_request()
+@app.route("/characters/favorite/<string:characterName>", methods = ['PATCH'])
+def removeFavorite(characterName):
+    # print(session['loged_user'], characterName)
+    loged_user = json.loads(session['loged_user'])['username']
+    favorite_characters_in_db = mongo.db.users.find_one({'username': loged_user})['favoriteCharacters']
+    favorite_characters_in_db.remove(characterName)
+
+    mongo.db.users.update_one({'username': loged_user}, {'$set': {'favoriteCharacters': favorite_characters_in_db}})
+
+    return jsonify({"message": F'{characterName} remove from favorites'})
+
+############## error handlers
+
+
+@app.errorhandler(403)
+def forbidden(error = None):
+    response = make_response(jsonify({"message": "The csrf_token were not validated"}))
+    response.status_code = 403
+    return response
+
+@app.errorhandler(400)
+def bad_request(error = None):
+    response = jsonify({
+        'message': "Bad Request: The request cannot be processed due to incorrect syntax or invalid data."
+    })
+
+    return response, 400
+
+################## TESTS
 
 @app.route("/characters/<id>", methods = ['GET'])
 def getCharacter(id):
@@ -131,16 +140,3 @@ def updateCharacter(id):
 
     return response
 
-@app.errorhandler(403)
-def forbidden(error = None):
-    response = make_response(jsonify({"message": "The csrf_token were not validated"}))
-    response.status_code = 403
-    return response
-
-@app.errorhandler(400)
-def bad_request(error = None):
-    response = jsonify({
-        'message': "Bad Request: The request cannot be processed due to incorrect syntax or invalid data."
-    })
-
-    return response, 400
