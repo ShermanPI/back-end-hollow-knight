@@ -42,7 +42,8 @@ def login_user():
             if user and bcrypt.check_password_hash(user['password'], form.password.data):
                 user = mongo.db.users.find_one({'username': form.username.data}, {'password': 0})
                 if form.remember.data:
-                    session['loged_user'] = json_util.dumps(user)
+                    session['loged_user'] = str(user['_id'])
+                    print(json_util.dumps(user))
 
                 return json_util.dumps(user)
             
@@ -59,17 +60,15 @@ def login_user():
 
 @app.route("/login", methods = ["GET"])
 def loged_user():
-
+    print("LOGEEEEEEED", session) 
     if 'loged_user' in session:
-        user = session['loged_user'] #save a JSON with the user data
-        user_dict = json_util.loads(user)
-        user = mongo.db.users.find_one({"_id": user_dict['_id']}) 
+        user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])})#save a JSON with the user data
         
         return json_util.dumps(user)
-    
-    return jsonify({
-        'user': {}
-        })
+    else:
+        return jsonify({
+            'user': {}
+            })
 
 @app.route('/logout')
 def logout():
@@ -84,7 +83,6 @@ def getUser(id):
 @app.route("/user/<id>", methods=['PUT']) #edit profile
 def update_user(id):
     payload = request.json
-    print("UUEYEEUJYHVGBRAE PAYLOAAAD", payload)
     user = mongo.db.users.find_one({"_id": ObjectId(id)})
 
     if(payload.get("username", None)):
@@ -106,8 +104,8 @@ def update_user(id):
     user_type =  payload.get("type", user["type"])
 
     mongo.db.users.update_one({"_id": ObjectId(id)}, {"$set": {"username": user_username, "email": user_email, "pfpId": user_pfp_id, "HScore": user_HScore, "unlockByTheUser": user_unlocklByTheUser, "type": user_type}})
-    session['loged_user'] = json_util.dumps(user)
     user = mongo.db.users.find_one({"_id": ObjectId(id)})
+    session['loged_user'] = session['loged_user'] = str(user['_id'])
 
     return json_util.dumps(user)
 

@@ -61,24 +61,20 @@ def getCharactersSample(sample_size):
 
 @app.route("/characters/favorite/<string:characterName>", methods = ['POST'])
 def addFavorite(characterName):
-    # print(session['loged_user'], characterName)
-    loged_user = json.loads(session['loged_user'])['username']
-    favorite_characters_in_db = mongo.db.users.find_one({'username': loged_user})['favoriteCharacters']
+    loged_user = mongo.db.users.find_one({'_id': ObjectId(request.json["id"])})
+    favorite_characters_in_db = loged_user['favoriteCharacters']
     favorite_characters_in_db.append(characterName)
-    print(favorite_characters_in_db)
-
-    mongo.db.users.update_one({'username': loged_user}, {'$set': {'favoriteCharacters': favorite_characters_in_db}})
+    mongo.db.users.update_one({'_id': ObjectId(request.json["id"])}, {'$set': {'favoriteCharacters': favorite_characters_in_db}})
 
     return jsonify({"message": F'{characterName} added as favorite'})
 
 @app.route("/characters/favorite/<string:characterName>", methods = ['PATCH'])
 def removeFavorite(characterName):
-    # print(session['loged_user'], characterName)
-    loged_user = json.loads(session['loged_user'])['username']
-    favorite_characters_in_db = mongo.db.users.find_one({'username': loged_user})['favoriteCharacters']
+    loged_user = mongo.db.users.find_one({'_id': ObjectId(request.json["id"])})
+    favorite_characters_in_db = loged_user['favoriteCharacters']
     favorite_characters_in_db.remove(characterName)
 
-    mongo.db.users.update_one({'username': loged_user}, {'$set': {'favoriteCharacters': favorite_characters_in_db}})
+    mongo.db.users.update_one({'_id': ObjectId(request.json["id"])}, {'$set': {'favoriteCharacters': favorite_characters_in_db}})
 
     return jsonify({"message": F'{characterName} remove from favorites'})
 
