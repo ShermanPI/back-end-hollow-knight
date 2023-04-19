@@ -59,6 +59,15 @@ def getCharactersSample(sample_size):
 
     return make_response(response)
 
+@app.route("/user/favorites/<string:userId>", methods = ['GET'])
+def getFavorites(userId):
+    user = mongo.db.users.find_one({"_id": ObjectId(userId)})
+    userFavoriteCharacters = user["favoriteCharacters"]
+    favoriteCharactersInfo = mongo.db.characters.find({'characterName': {'$in': userFavoriteCharacters}})
+    print(request)
+    return json_util.dumps(favoriteCharactersInfo)
+
+
 @app.route("/characters/favorite/<string:characterName>", methods = ['POST'])
 def addFavorite(characterName):
     loged_user = mongo.db.users.find_one({'_id': ObjectId(request.json["id"])})
