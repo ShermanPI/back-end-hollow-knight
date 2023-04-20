@@ -19,9 +19,7 @@ def save_picture(form_picture):
 
 @app.route("/characters", methods = ["POST"])
 def addCharacter():
-    print("This is the object with the image", request.files)
     form = createCharacterForm(request.form)
-    print(form.csrf_token.data, " SHAKJSDBN ", session["form_csrf_token"])
     if(form.csrf_token.data == session.get("form_csrf_token")):
         if(form.validate_on_submit()):
             picture_file = save_picture(request.files['characterImgSrc'])
@@ -64,7 +62,6 @@ def getFavorites(userId):
     user = mongo.db.users.find_one({"_id": ObjectId(userId)})
     userFavoriteCharacters = user["favoriteCharacters"]
     favoriteCharactersInfo = mongo.db.characters.find({'characterName': {'$in': userFavoriteCharacters}})
-    print(request)
     return json_util.dumps(favoriteCharactersInfo)
 
 
