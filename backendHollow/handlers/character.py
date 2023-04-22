@@ -19,12 +19,14 @@ def save_picture(form_picture):
 
 @app.route("/characters", methods = ["POST"])
 def addCharacter():
+    print("This is the object with the image", request.files)
     form = createCharacterForm(request.form)
+    print(form.csrf_token.data, " SHAKJSDBN ", session["form_csrf_token"])
     if(form.csrf_token.data == session.get("form_csrf_token")):
         if(form.validate_on_submit()):
             picture_file = save_picture(request.files['characterImgSrc'])
 
-            newCharacter = mongo.db.characters.insert_one({'characterName': form.characterName.data, 'characterMainInfo': form.characterMainInfo.data, 'characterSecondaryInfo': form.characterSecondaryInfo.data, 'characterImgSrc': picture_file})
+            newCharacter = mongo.db.characters.insert_one({'characterName': form.characterName.data.strip(), 'characterMainInfo': form.characterMainInfo.data, 'characterSecondaryInfo': form.characterSecondaryInfo.data, 'characterImgSrc': picture_file})
             character = mongo.db.characters.find_one({'id': ObjectId(newCharacter.inserted_id)})
             return jsonify({
                 'message': f"The character {form.characterName.data} has been added",
@@ -57,30 +59,26 @@ def getCharactersSample(sample_size):
 
     return make_response(response)
 
-@app.route("/user/favorites/<string:userId>", methods = ['GET'])
+@app.route("/user/favorites/<userId>", methods = ['GET'])
 def getFavorites(userId):
     user = mongo.db.users.find_one({"_id": ObjectId(userId)})
     userFavoriteCharacters = user["favoriteCharacters"]
-    favoriteCharactersInfo = mongo.db.characters.find({'characterName': {'$in': userFavoriteCharacters}})
+    favoriteCharactersInfo = mongo.db.characters.find({'_id': {'$in': userFavoriteCharacters}})
+    print(request)
     return json_util.dumps(favoriteCharactersInfo)
 
-
-@app.route("/characters/favorite/<string:characterName>", methods = ['POST'])
-def addFavorite(characterName):
-    loged_user = mongo.db.users.find_one({'_id': ObjectId(request.json["id"])})
-    favorite_characters_in_db = loged_user['favoriteCharacters']
-    favorite_characters_in_db.append(characterName)
-    mongo.db.users.update_one({'_id': ObjectId(request.json["id"])}, {'$set': {'favoriteCharacters': favorite_characters_in_db}})
-
+@app.route("/<userId>/favorite/<characterName>", methods = ['POST'])
+def addFavorite(userId, characterName):
+    favorite_character = mongo.db.characters.find_one({"characterName": characterName})
+    characterId = favorite_character["_id"]
+    mongo.db.users.update_one({'_id': ObjectId(userId)}, {'$push': {'favoriteCharacters': ObjectId(characterId)}})    
     return jsonify({"message": F'{characterName} added as favorite'})
 
-@app.route("/characters/favorite/<string:characterName>", methods = ['PATCH'])
-def removeFavorite(characterName):
-    loged_user = mongo.db.users.find_one({'_id': ObjectId(request.json["id"])})
-    favorite_characters_in_db = loged_user['favoriteCharacters']
-    favorite_characters_in_db.remove(characterName)
-
-    mongo.db.users.update_one({'_id': ObjectId(request.json["id"])}, {'$set': {'favoriteCharacters': favorite_characters_in_db}})
+@app.route("/<userId>/favorite/<characterName>", methods = ['DELETE'])
+def removeFavorite(userId, characterName):
+    favorite_character = mongo.db.characters.find_one({"characterName": characterName})
+    characterId = favorite_character["_id"]
+    mongo.db.users.update_one({'_id': ObjectId(userId)}, {'$pull': {'favoriteCharacters': ObjectId(characterId)}})    
 
     return jsonify({"message": F'{characterName} remove from favorites'})
 

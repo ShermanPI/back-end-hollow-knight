@@ -10,7 +10,7 @@ def register_user():
     form = RegistrationForm(request.form)
     if(form.csrf_token.data == session["form_csrf_token"]):
         if(form.validate_on_submit()):
-            username = form.username.data
+            username = form.username.data.strip()
             email = form.email.data
             hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
 
@@ -60,10 +60,10 @@ def login_user():
 
 @app.route("/login", methods = ["GET"])
 def loged_user():
-    print("LOGEEEEEEED", session) 
     if 'loged_user' in session:
-        user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])})#save a JSON with the user data
-        
+        user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])}, {'password': 0})#save a JSON with the user data
+        favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
+        user['favoriteCharacters'] = favoriteCharacters
         return json_util.dumps(user)
     else:
         return jsonify({
