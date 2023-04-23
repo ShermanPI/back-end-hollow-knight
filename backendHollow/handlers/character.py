@@ -8,7 +8,12 @@ from bson import json_util
 from bson.objectid import ObjectId
 
 
-def save_picture(form_picture):
+def save_picture(form_picture, prev_img = False):
+    if(prev_img):
+        prev_picture = os.path.join(app.root_path, 'static/characters-images', prev_img)
+        if os.path.exists(prev_picture):
+            os.remove(prev_picture)
+
     random_hex = secrets.token_hex(8)
     f_name, f_extention = os.path.splitext(form_picture.filename)
     picture_filename = random_hex + f_extention
@@ -19,9 +24,7 @@ def save_picture(form_picture):
 
 @app.route("/characters", methods = ["POST"])
 def addCharacter():
-    print("This is the object with the image", request.files)
     form = createCharacterForm(request.form)
-    print(form.csrf_token.data, " SHAKJSDBN ", session["form_csrf_token"])
     
     if(form.csrf_token.data == session.get("form_csrf_token")):
         if(form.validate_on_submit()):
@@ -41,22 +44,47 @@ def addCharacter():
 
 @app.route("/characters", methods = ['GET'])
 def getCharacters():
-    form = editCharacterForm(request.form)
     characters = mongo.db.characters.aggregate([{"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
     response = json_util.dumps(characters)
 
     return make_response(response)
 
-@app.route("/characters/<characterName>", methods = ['PUT'])
+@app.route("/character/<characterName>", methods = ['PUT'])
 def updateCharacter(characterName):
-    return jsonify({'message': characterName}) 
+    form = editCharacterForm(request.form)
 
+    if(form.csrf_token.data == session.get("form_csrf_token")):
+        if(form.validate_on_submit()):
+            new_character_info = {}
+            character_to_edit = mongo.db.characters.find_one({'characterName': characterName})
+
+            image = request.files['newCharacterImgSrc']
+            if(image.filename):
+                picture_file = save_picture(request.files['newCharacterImgSrc'], character_to_edit['characterImgSrc'])
+                new_character_info['characterImgSrc'] = picture_file
+
+            new_character_info['characterName'] = form.newCharacterName.data
+            new_character_info['characterMainInfo'] = form.newCharacterMainInfo.data
+            new_character_info['characterSecondaryInfo'] = form.newCharacterSecondaryInfo.data
+
+            mongo.db.characters.update_one({"characterName": characterName}, {'$set': new_character_info})
+
+            updated_characters = mongo.db.characters.find_one({"_id": ObjectId(str(character_to_edit['_id']))})
+            updated_characters['characterImgSrc'] = f"{url_for('static', filename='characters-images/')}{updated_characters['characterImgSrc']}"
+            return json_util.dumps(updated_characters)
+        else:
+            response = make_response(jsonify({'errors': form.errors}))
+            response.status_code = 409
+            return response
+    else:
+        return forbidden()
 
 @app.route("/charactersSample/<int:sample_size>", methods = ['GET', 'POST'])
 def getCharactersSample(sample_size):
     if request.method == 'POST':
-        already_rendered = request.json['items']
-        characters = mongo.db.characters.aggregate([{"$match": {"characterName": {"$nin": already_rendered}}}, {"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
+        already_rendered = [ObjectId(id) for id in request.json['items']]
+        print(already_rendered)
+        characters = mongo.db.characters.aggregate([{"$match": {"_id": {"$nin": already_rendered}}}, {"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
     else:
         characters = mongo.db.characters.aggregate([{"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
 
@@ -69,7 +97,6 @@ def getFavorites(userId):
     user = mongo.db.users.find_one({"_id": ObjectId(userId)})
     userFavoriteCharacters = user["favoriteCharacters"]
     favoriteCharactersInfo = mongo.db.characters.find({'_id': {'$in': userFavoriteCharacters}})
-    print(request)
     return json_util.dumps(favoriteCharactersInfo)
 
 @app.route("/<userId>/favorite/<characterName>", methods = ['POST'])

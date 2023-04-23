@@ -43,8 +43,9 @@ def login_user():
                 user = mongo.db.users.find_one({'username': form.username.data}, {'password': 0})
                 if form.remember.data:
                     session['loged_user'] = str(user['_id'])
-                    print(json_util.dumps(user))
 
+                favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
+                user['favoriteCharacters'] = favoriteCharacters
                 return json_util.dumps(user)
             
             else:

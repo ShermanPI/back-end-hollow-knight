@@ -43,6 +43,7 @@ class createCharacterForm(FlaskForm):
             raise ValidationError("That Character Name is Taken. Please choose a diferent one")
 
 class editCharacterForm(FlaskForm):
+    characterEditingName = StringField('Character Name', validators=[DataRequired(), Length(min=2, max=22)])
     newCharacterName = StringField('Character Name', validators=[DataRequired(), Length(min=2, max=22)])
     newCharacterMainInfo = TextAreaField("Character Main Info", validators=[DataRequired()])
     newCharacterSecondaryInfo = TextAreaField("character Secondary Info")
@@ -50,7 +51,12 @@ class editCharacterForm(FlaskForm):
     # characterImgSrc = Field('Character Image') # This doesnt work so im using the request.files to search my file submited validators=[FileRequired(), FileAllowed(['png', 'jpeg', 'webp', 'jpg'])]
     submit = SubmitField('Save Changes')
 
-    def validate_characterName(self, newCharacterName):
-        newCharacterName = mongo.db.characters.find_one({"characterName": newCharacterName.data})
-        if newCharacterName:
-            raise ValidationError("That Character Name is Taken. Please choose a diferent one")
+    def validate_characterEditingName(self, characterEditingName):
+        character_name_in_db = mongo.db.characters.find_one({"characterName": characterEditingName.data})
+        if not character_name_in_db:
+            raise ValidationError("This Character doesn't exist. Please choose a diferent one")
+
+    def validate_newCharacterName(self, newCharacterName):
+        character_name_in_db = mongo.db.characters.find_one({"characterName": newCharacterName.data})
+        if character_name_in_db and newCharacterName.data != character_name_in_db['characterName']:
+            raise ValidationError("This Character Name is Taken. Please choose a diferent one")
