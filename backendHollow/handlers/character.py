@@ -3,7 +3,7 @@ import os
 import json
 from flask import make_response, request, jsonify, session, url_for
 from backendHollow import app, mongo
-from backendHollow.forms import createCharacterForm
+from backendHollow.forms import createCharacterForm, editCharacterForm
 from bson import json_util
 from bson.objectid import ObjectId
 
@@ -22,16 +22,15 @@ def addCharacter():
     print("This is the object with the image", request.files)
     form = createCharacterForm(request.form)
     print(form.csrf_token.data, " SHAKJSDBN ", session["form_csrf_token"])
+    
     if(form.csrf_token.data == session.get("form_csrf_token")):
         if(form.validate_on_submit()):
             picture_file = save_picture(request.files['characterImgSrc'])
 
             newCharacter = mongo.db.characters.insert_one({'characterName': form.characterName.data.strip(), 'characterMainInfo': form.characterMainInfo.data, 'characterSecondaryInfo': form.characterSecondaryInfo.data, 'characterImgSrc': picture_file})
-            character = mongo.db.characters.find_one({'id': ObjectId(newCharacter.inserted_id)})
-            return jsonify({
-                'message': f"The character {form.characterName.data} has been added",
-                'character': json_util.dumps(character)
-                })
+            character = mongo.db.characters.find_one({'_id': ObjectId(newCharacter.inserted_id)})
+            character['characterImgSrc'] = f"{url_for('static', filename='characters-images/')}{character['characterImgSrc']}"
+            return json_util.dumps(character)
         else:
             response = make_response(jsonify({'errors': form.errors}))
             response.status_code = 409
@@ -42,10 +41,16 @@ def addCharacter():
 
 @app.route("/characters", methods = ['GET'])
 def getCharacters():
+    form = editCharacterForm(request.form)
     characters = mongo.db.characters.aggregate([{"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
     response = json_util.dumps(characters)
 
     return make_response(response)
+
+@app.route("/characters/<characterName>", methods = ['PUT'])
+def updateCharacter(characterName):
+    return jsonify({'message': characterName}) 
+
 
 @app.route("/charactersSample/<int:sample_size>", methods = ['GET', 'POST'])
 def getCharactersSample(sample_size):
@@ -98,45 +103,3 @@ def bad_request(error = None):
     })
 
     return response, 400
-
-################## TESTS
-
-@app.route("/characters/<id>", methods = ['GET'])
-def getCharacter(id):
-    character_in_bson = mongo.db.characters.find_one({"_id": ObjectId(id)})
-    character_in_bson_to_string = json_util.dumps(character_in_bson)
-
-    return make_response(character_in_bson_to_string, mimetype="application/json")
-
-@app.route("/characters/<id>", methods = ["DELETE"])
-def deleteCharacter(id):
-    mongo.db.characters.delete_one({"_id": ObjectId(id)})
-    
-    response = jsonify({
-        "message": f'The character with ID {id} was succefully deleted'
-    })
-    return response
-
-
-@app.route("/characters/<id>", methods = ["PUT"])
-def updateCharacter(id):
-    characterToUpdate = mongo.db.characters.find_one({"_id": ObjectId(id)})
-
-    characterName = request.json.get('name', characterToUpdate["characterName"])
-    characterImgSrc = request.json.get('imgSrc', characterToUpdate["characterImgSrc"])
-    characterMainInfo = request.json.get('mainInfo', characterToUpdate["characterMainInfo"])
-    characterSecondaryInfo = request.json.get('secondaryInfo', characterToUpdate["characterSecondaryInfo"])
-
-    mongo.db.characters.update_one({"_id": ObjectId(id)}, {"$set": {
-        "name": characterName, 
-        "imgSrc": characterImgSrc,
-        "mainInfo": characterMainInfo,
-        "secondaryInfo": characterSecondaryInfo
-        }})
-    
-    response = jsonify({
-        'message': f'The character with ID {id} has been updated successfully'
-    })
-
-    return response
-
