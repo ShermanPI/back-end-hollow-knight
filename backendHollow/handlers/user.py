@@ -27,7 +27,7 @@ def register_user():
             response = make_response(jsonify({'errors': form.errors}))
             response.status_code = 409
 
-            return response
+            return response, 409
     else:
         return forbidden()
     
@@ -35,6 +35,7 @@ def register_user():
 @app.route("/login", methods = ["POST"])
 def login_user():
     form = LoginForm(request.form)
+    print(form.csrf_token.data)
     if(form.csrf_token.data == session.get("form_csrf_token")):
         if form.validate_on_submit():
             user = mongo.db.users.find_one({'username': form.username.data})
