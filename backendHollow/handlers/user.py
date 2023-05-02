@@ -35,7 +35,6 @@ def register_user():
 @app.route("/login", methods = ["POST"])
 def login_user():
     form = LoginForm(request.form)
-    print(form.csrf_token.data)
     if(form.csrf_token.data == session.get("form_csrf_token")):
         if form.validate_on_submit():
             user = mongo.db.users.find_one({'username': form.username.data})
@@ -85,6 +84,7 @@ def getUser(id):
 @app.route("/user/<id>", methods=['PUT']) #edit profile
 def update_user(id):
     payload = request.json
+    print(request.json)
     user = mongo.db.users.find_one({"_id": ObjectId(id)})
 
     if(payload.get("username", None)):
