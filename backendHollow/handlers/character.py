@@ -21,6 +21,11 @@ def save_picture(form_picture, prev_img = False):
     form_picture.save(picture_path)
     return picture_filename
 
+def delete_picture(picture):
+    picture = os.path.join(app.root_path, 'static/characters-images', picture)
+    if os.path.exists(picture):
+        os.remove(picture)
+
 
 @app.route("/characters", methods = ["POST"])
 def addCharacter():
@@ -118,6 +123,7 @@ def deleteCharacter(id):
     character_to_delete = mongo.db.characters.find_one({'_id': ObjectId(id)})
     if(character_to_delete):
         mongo.db.characters.delete_one({'_id': ObjectId(id)})
+        delete_picture(character_to_delete['characterImgSrc'])
         return jsonify({'message': 'Character deleted'})
     else:
         response = make_response(jsonify({'message': 'There is no character with this name, please check and try again'}))
