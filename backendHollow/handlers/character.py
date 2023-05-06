@@ -83,7 +83,6 @@ def updateCharacter(characterName):
 def getCharactersSample(sample_size):
     if request.method == 'POST':
         already_rendered = [ObjectId(id) for id in request.json['items']]
-        print(already_rendered)
         characters = mongo.db.characters.aggregate([{"$match": {"_id": {"$nin": already_rendered}}}, {"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
     else:
         characters = mongo.db.characters.aggregate([{"$sample": {"size": sample_size}}, {"$project": {"characterImgSrc": {"$concat": [url_for('static', filename='characters-images/'), "$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
@@ -114,6 +113,17 @@ def removeFavorite(userId, characterName):
 
     return jsonify({"message": F'{characterName} remove from favorites'})
 
+@app.route('/character/<id>', methods = ['DELETE'])
+def deleteCharacter(id):
+    character_to_delete = mongo.db.characters.find_one({'_id': ObjectId(id)})
+    if(character_to_delete):
+        mongo.db.characters.delete_one({'_id': ObjectId(id)})
+        return jsonify({'message': 'Character deleted'})
+    else:
+        response = make_response(jsonify({'message': 'There is no character with this name, please check and try again'}))
+        response.status_code = 404
+        return response
+    
 ############## error handlers
 
 
