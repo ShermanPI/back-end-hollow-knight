@@ -8,68 +8,68 @@ from bson.objectid import ObjectId
 @app.route("/register", methods = ["POST"])
 def register_user():
     form = RegistrationForm(request.form)
-    if(form.csrf_token.data == session["form_csrf_token"]):
-        if(form.validate_on_submit()):
-            username = form.username.data.strip()
-            email = form.email.data
-            hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
+    # if(form.csrf_token.data == session["form_csrf_token"]):
+    if(form.validate_on_submit()):
+        username = form.username.data.strip()
+        email = form.email.data
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
 
-            user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password, 'pfpId': 0, 'HScore': 0, 'unlockByTheUser': 0, 'type': "user", 'favoriteCharacters': []})
+        user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password, 'pfpId': 0, 'HScore': 0, 'unlockByTheUser': 0, 'type': "user", 'favoriteCharacters': []})
 
-            return jsonify({
-                    'message': f'Account for <span class="points-required">{form.username.data}</span> has been created... Now you can Log In',
-                    'userData': {
-                        'id': str(user.inserted_id), 
-                        'username': form.username.data
-                    }
-                })
-        else:
-            response = make_response(jsonify({'errors': form.errors}))
-            response.status_code = 409
-
-            return response, 409
+        return jsonify({
+                'message': f'Account for <span class="points-required">{form.username.data}</span> has been created... Now you can Log In',
+                'userData': {
+                    'id': str(user.inserted_id), 
+                    'username': form.username.data
+                }
+            })
     else:
-        return forbidden()
+        response = make_response(jsonify({'errors': form.errors}))
+        response.status_code = 409
+
+        return response, 409
+    # else:
+    #     return forbidden()
     
 
 @app.route("/login", methods = ["POST"])
 def login_user():
     form = LoginForm(request.form)
-    if(form.csrf_token.data == session.get("form_csrf_token")):
-        if form.validate_on_submit():
-            user = mongo.db.users.find_one({'username': form.username.data})
+    # if(form.csrf_token.data == session.get("form_csrf_token")):
+    if form.validate_on_submit():
+        user = mongo.db.users.find_one({'username': form.username.data})
 
-            if user and bcrypt.check_password_hash(user['password'], form.password.data):
-                user = mongo.db.users.find_one({'username': form.username.data}, {'password': 0})
-                if form.remember.data:
-                    session['loged_user'] = str(user['_id'])
+        if user and bcrypt.check_password_hash(user['password'], form.password.data):
+            user = mongo.db.users.find_one({'username': form.username.data}, {'password': 0})
+            if form.remember.data:
+                session['loged_user'] = str(user['_id'])
 
-                favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
-                user['favoriteCharacters'] = favoriteCharacters
-                return json_util.dumps(user)
-            
-            else:
-
-                response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
-                response.status_code = 401
-                return response
+            favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
+            user['favoriteCharacters'] = favoriteCharacters
+            return json_util.dumps(user)
+        
         else:
-            return bad_request()
+
+            response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
+            response.status_code = 401
+            return response
     else:
-        return forbidden()
+        return bad_request()
+    # else:
+    #     return forbidden()
 
 
 @app.route("/login", methods = ["GET"])
 def loged_user():
-    if 'loged_user' in session:
-        user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])}, {'password': 0})#save a JSON with the user data
-        favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
-        user['favoriteCharacters'] = favoriteCharacters
-        return json_util.dumps(user)
-    else:
-        return jsonify({
-            'user': {}
-            })
+    # if 'loged_user' in session:
+    user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])}, {'password': 0})#save a JSON with the user data
+    favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
+    user['favoriteCharacters'] = favoriteCharacters
+    return json_util.dumps(user)
+    # else:
+    #     return jsonify({
+    #         'user': {}
+    #         })
 
 @app.route('/logout')
 def logout():
