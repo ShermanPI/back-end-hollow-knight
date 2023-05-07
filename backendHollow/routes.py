@@ -7,9 +7,7 @@ import secrets
 def csrf_token():
     token = secrets.token_hex(16)
     session['form_csrf_token'] = token
-    response = make_response(jsonify({'csrfToken': token}))
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
+    return jsonify({'csrfToken': token})
 
 
 from backendHollow.handlers import character, user
