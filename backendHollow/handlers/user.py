@@ -8,6 +8,7 @@ from bson.objectid import ObjectId
 @app.route("/register", methods = ["POST"])
 def register_user():
     form = RegistrationForm(request.form)
+    print()
     if(form.csrf_token.data == session["form_csrf_token"]):
         if(form.validate_on_submit()):
             username = form.username.data.strip()
