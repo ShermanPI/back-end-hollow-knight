@@ -1,4 +1,4 @@
-from flask import jsonify, session, make_response
+from flask import jsonify, session
 from backendHollow import app
 from backendHollow.forms import createCharacterForm
 import secrets
