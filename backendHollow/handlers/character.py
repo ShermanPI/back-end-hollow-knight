@@ -26,12 +26,18 @@ def delete_picture(picture):
     if os.path.exists(picture):
         os.remove(picture)
 
+def isAdmin():
+    user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])}, {'password': 0})
+    if user['type'] == 'admin':
+        return True
+    else:
+        return False
 
 @app.route("/characters", methods = ["POST"])
 def addCharacter():
     form = createCharacterForm(request.form)
     
-    if(form.csrf_token.data == session.get("form_csrf_token")):
+    if(form.csrf_token.data == session.get("form_csrf_token") and isAdmin()):
         if(form.validate_on_submit()):
             picture_file = save_picture(request.files['characterImgSrc'])
 
@@ -58,7 +64,7 @@ def getCharacters():
 def updateCharacter(characterName):
     form = editCharacterForm(request.form)
 
-    if(form.csrf_token.data == session.get("form_csrf_token")):
+    if(form.csrf_token.data == session.get("form_csrf_token") and isAdmin()):
         if(form.validate_on_submit()):
             new_character_info = {}
             character_to_edit = mongo.db.characters.find_one({'characterName': characterName})
@@ -120,15 +126,16 @@ def removeFavorite(userId, characterName):
 
 @app.route('/character/<id>', methods = ['DELETE'])
 def deleteCharacter(id):
-    character_to_delete = mongo.db.characters.find_one({'_id': ObjectId(id)})
-    if(character_to_delete):
-        mongo.db.characters.delete_one({'_id': ObjectId(id)})
-        delete_picture(character_to_delete['characterImgSrc'])
-        return jsonify({'message': 'Character deleted'})
-    else:
-        response = make_response(jsonify({'message': 'There is no character with this name, please check and try again'}))
-        response.status_code = 404
-        return response
+    if(isAdmin()):
+        character_to_delete = mongo.db.characters.find_one({'_id': ObjectId(id)})
+        if(character_to_delete):
+            mongo.db.characters.delete_one({'_id': ObjectId(id)})
+            delete_picture(character_to_delete['characterImgSrc'])
+            return jsonify({'message': 'Character deleted'})
+        else:
+            response = make_response(jsonify({'message': 'There is no character with this name, please check and try again'}))
+            response.status_code = 404
+            return response
     
 ############## error handlers
 

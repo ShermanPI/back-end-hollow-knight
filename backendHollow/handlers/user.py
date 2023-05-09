@@ -62,7 +62,7 @@ def login_user():
 @app.route("/login", methods = ["GET"])
 def loged_user():
     if 'loged_user' in session:
-        user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])}, {'password': 0})#save a JSON with the user data
+        user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])}, {'password': 0})
         favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
         user['favoriteCharacters'] = favoriteCharacters
         return json_util.dumps(user)
@@ -81,7 +81,7 @@ def getUser(id):
     user = mongo.db.users.find_one({"_id": ObjectId(id)}, {'password': 0})
     return json_util.dumps(user)
 
-@app.route("/user/<id>", methods=['PUT']) #edit profile
+@app.route("/user/<id>", methods=['PUT'])
 def update_user(id):
     payload = request.json
     user = mongo.db.users.find_one({"_id": ObjectId(id)})
