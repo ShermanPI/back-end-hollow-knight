@@ -7,7 +7,7 @@ from bson import json_util
 from bson.objectid import ObjectId
 from google.cloud import storage
 
-CLOUD_STORAGE_BUCKET = os.environ["CLOUD_STORAGE_BUCKET"]
+CLOUD_STORAGE_BUCKET = "hollow-images"
 gcs = storage.Client()
 bucket = gcs.get_bucket(CLOUD_STORAGE_BUCKET)
 
