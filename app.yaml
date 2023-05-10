@@ -1,0 +1,2 @@
+env_variables:
+  CLOUD_STORAGE_BUCKET: "hollow-images"
