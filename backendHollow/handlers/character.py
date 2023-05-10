@@ -28,7 +28,6 @@ def save_picture(form_picture, prev_img = False):
     blob.upload_from_string(
         form_picture.read(), content_type=form_picture.content_type
     )
-
     blob.make_public()
     return blob.public_url
 
