@@ -7,11 +7,10 @@ from bson import json_util
 from bson.objectid import ObjectId
 from google.cloud import storage
 
-CLOUD_STORAGE_BUCKET = 'hollow-images'
 os.environ["GCLOUD_PROJECT"] = "backendhollow"
 credentials_path = 'google_api_credentials.json'
 gcs = storage.Client(credentials_path)
-bucket = gcs.get_bucket(CLOUD_STORAGE_BUCKET)
+bucket = gcs.get_bucket('hollow-images')
 
 def save_picture(form_picture, prev_img = False):
     
