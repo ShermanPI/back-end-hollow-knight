@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'

@@ -3,6 +3,10 @@ from backendHollow import app
 from backendHollow.forms import createCharacterForm
 import secrets
 
+@app.before_request
+def setup():
+    session.permanent = True
+
 @app.route("/csrf_token", methods = ["GET"])
 def csrf_token():
     token = secrets.token_hex(16)
