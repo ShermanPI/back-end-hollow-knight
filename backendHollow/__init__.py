@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, session
 from flask_pymongo import PyMongo
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
@@ -6,10 +6,15 @@ from datetime import timedelta
 import os
 
 app = Flask(__name__)
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = False
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 CORS(app, supports_credentials=True)
 SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
