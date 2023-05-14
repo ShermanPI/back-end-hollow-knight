@@ -9,9 +9,6 @@ app = Flask(__name__)
 
 SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
-app.config['COOKIE_SECURE'] = True
-app.config['COOKIE_HTTPONLY'] = False
-app.config['COOKIE_SAMESITE'] = 'None'
 app.config['MONGO_URI'] = "mongodb+srv://juokx1:ivhcJlPAiN1QnVsj@wikisherman.ewhecfi.mongodb.net/hollowDB?retryWrites=true&w=majority"
 app.config['WTF_CSRF_ENABLED'] = False
 mongo = PyMongo(app)
