@@ -37,11 +37,11 @@ def login_user():
         user = mongo.db.users.find_one({'username': form.username.data})
 
         if user and bcrypt.check_password_hash(user['password'], form.password.data):
-            user = mongo.db.users.find_one({'username': form.username.data}, {'password': 0})
+            del user['password']
                 
             favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
             user['favoriteCharacters'] = favoriteCharacters
-            response = make_response(user)
+            response = make_response(json_util.dumps(user))
             response.headers['Content-Type'] = 'application/json'
 
             if form.remember.data:
