@@ -46,7 +46,7 @@ def login_user():
 
             if form.remember.data:
                 expires = datetime.datetime.now() + datetime.timedelta(minutes=10)
-                mongo.db.users.update_one({'username': form.username.data}, {'session': {'expires': expires}})
+                mongo.db.users.update_one({'username': form.username.data}, {"$set":{'session': {'expires': expires}}})
                 response.set_cookie('logged_user_id', str(user['_id']), expires=expires)
             
             return response
