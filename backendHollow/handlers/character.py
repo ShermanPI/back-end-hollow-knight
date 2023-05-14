@@ -2,6 +2,7 @@ import secrets
 import os
 from flask import make_response, request, jsonify, url_for
 from backendHollow import app, mongo
+from backendHollow.routes import get_logged_user
 from backendHollow.forms import createCharacterForm, editCharacterForm
 from bson import json_util
 from bson.objectid import ObjectId
@@ -35,69 +36,70 @@ def delete_picture(picture):
     if picture_blob.exists():
         picture_blob.delete()
 
-# def isAdmin():
-#     user = mongo.db.users.find_one({"_id": ObjectId(s#s)}, {'password': 0})
-#     if user['type'] == 'admin':
-#         return True
-#     else:
-#         return False
+def isAdmin(request):
+    user = get_logged_user(request)
+    if not user:
+        return None
+
+    if user['type'] == 'admin':
+        return True
+    else:
+        return False
 
 @app.route("/characters", methods = ["POST"])
 def addCharacter():
     form = createCharacterForm(request.form)
     
-    # if(isAdmin()):
-    if(form.validate_on_submit()):
-        picture_file = save_picture(request.files['characterImgSrc'])
+    if(isAdmin()):
+        if(form.validate_on_submit()):
+            picture_file = save_picture(request.files['characterImgSrc'])
 
-        newCharacter = mongo.db.characters.insert_one({'characterName': form.characterName.data.strip(), 'characterMainInfo': form.characterMainInfo.data, 'characterSecondaryInfo': form.characterSecondaryInfo.data, 'characterImgSrc': picture_file})
-        character = mongo.db.characters.find_one({'_id': ObjectId(newCharacter.inserted_id)})
-        # character['characterImgSrc'] = f"{url_for('static', filename='characters-images/')}{character['characterImgSrc']}"
-        return json_util.dumps(character)
+            newCharacter = mongo.db.characters.insert_one({'characterName': form.characterName.data.strip(), 'characterMainInfo': form.characterMainInfo.data, 'characterSecondaryInfo': form.characterSecondaryInfo.data, 'characterImgSrc': picture_file})
+            character = mongo.db.characters.find_one({'_id': ObjectId(newCharacter.inserted_id)})
+            return json_util.dumps(character)
+        else:
+            response = make_response(jsonify({'errors': form.errors}))
+            response.status_code = 409
+            return response
     else:
-        response = make_response(jsonify({'errors': form.errors}))
-        response.status_code = 409
-
-        return response
-    # else:
-    #     return forbidden()
+        return forbidden()
 
 @app.route("/characters", methods = ['GET'])
 def getCharacters():
-    characters = mongo.db.characters.aggregate([{"$project": {"characterImgSrc": {"$concat": ["$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
-    response = json_util.dumps(characters)
-
-    return make_response(response)
+    characters = mongo.db.characters.find({})
+    response = make_response(json_util.dumps(characters))
+    response.headers['Content-Type'] = 'application/json'
+    return response
 
 @app.route("/character/<characterName>", methods = ['PUT'])
 def updateCharacter(characterName):
     form = editCharacterForm(request.form)
 
-    # if(isAdmin()):
-    if(form.validate_on_submit()):
-        new_character_info = {}
-        character_to_edit = mongo.db.characters.find_one({'characterName': characterName})
+    if(isAdmin()):
+        if(form.validate_on_submit()):
+            new_character_info = {}
+            character_to_edit = mongo.db.characters.find_one({'characterName': characterName})
 
-        image = request.files['newCharacterImgSrc']
-        if(image.filename):
-            picture_file = save_picture(request.files['newCharacterImgSrc'], character_to_edit['characterImgSrc'])
-            new_character_info['characterImgSrc'] = picture_file
+            image = request.files['newCharacterImgSrc']
+            if(image.filename):
+                picture_file = save_picture(request.files['newCharacterImgSrc'], character_to_edit['characterImgSrc'])
+                new_character_info['characterImgSrc'] = picture_file
 
-        new_character_info['characterName'] = form.newCharacterName.data
-        new_character_info['characterMainInfo'] = form.newCharacterMainInfo.data
-        new_character_info['characterSecondaryInfo'] = form.newCharacterSecondaryInfo.data
+            new_character_info['characterName'] = form.newCharacterName.data
+            new_character_info['characterMainInfo'] = form.newCharacterMainInfo.data
+            new_character_info['characterSecondaryInfo'] = form.newCharacterSecondaryInfo.data
 
-        mongo.db.characters.update_one({"characterName": characterName}, {'$set': new_character_info})
+            mongo.db.characters.update_one({"characterName": characterName}, {'$set': new_character_info})
 
-        updated_characters = mongo.db.characters.find_one({"_id": ObjectId(str(character_to_edit['_id']))})
-        updated_characters['characterImgSrc'] = f"{url_for('static', filename='characters-images/')}{updated_characters['characterImgSrc']}"
-        return json_util.dumps(updated_characters)
+            updated_characters = mongo.db.characters.find_one({"_id": ObjectId(str(character_to_edit['_id']))})
+            updated_characters['characterImgSrc'] = f"{url_for('static', filename='characters-images/')}{updated_characters['characterImgSrc']}"
+            return json_util.dumps(updated_characters)
+        else:
+            response = make_response(jsonify({'errors': form.errors}))
+            response.status_code = 409
+            return response
     else:
-        response = make_response(jsonify({'errors': form.errors}))
-        response.status_code = 409
-        return response
-    # else:
-    #     return forbidden()
+        return forbidden()
 
 @app.route("/charactersSample/<int:sample_size>", methods = ['GET', 'POST'])
 def getCharactersSample(sample_size):
@@ -151,7 +153,7 @@ def deleteCharacter(id):
 
 @app.errorhandler(403)
 def forbidden(error = None):
-    response = make_response(jsonify({"message": "The csrf_token were not validated"}))
+    response = make_response(jsonify({"message": "The server listened to the request, and will not do it"}))
     response.status_code = 403
     return response
 

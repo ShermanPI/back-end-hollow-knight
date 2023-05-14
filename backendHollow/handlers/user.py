@@ -3,6 +3,8 @@ from backendHollow import app, mongo, bcrypt
 from backendHollow.forms import RegistrationForm, LoginForm
 from bson import json_util
 from bson.objectid import ObjectId
+import datetime
+from backendHollow.routes import get_logged_user 
 
 
 @app.route("/register", methods = ["POST"])
@@ -25,7 +27,6 @@ def register_user():
     else:
         response = make_response(jsonify({'errors': form.errors}))
         response.status_code = 409
-
         return response, 409
     
 
@@ -37,15 +38,20 @@ def login_user():
 
         if user and bcrypt.check_password_hash(user['password'], form.password.data):
             user = mongo.db.users.find_one({'username': form.username.data}, {'password': 0})
-            if form.remember.data:
-                print('IT WILL REMEMBER THE S#S')
-
+                
             favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
             user['favoriteCharacters'] = favoriteCharacters
-            return json_util.dumps(user)
+            response = make_response(user)
+            response.headers['Content-Type'] = 'application/json'
+
+            if form.remember.data:
+                expires = datetime.datetime.now() + datetime.timedelta(minutes=10)
+                mongo.db.users.update_one({'username': form.username.data}, {'session': {'expires': expires}})
+                response.set_cookie('logged_user_id', str(user['_id']), expires=expires)
+            
+            return response
         
         else:
-
             response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
             response.status_code = 401
             return response
@@ -55,24 +61,25 @@ def login_user():
 
 @app.route("/login", methods = ["GET"])
 def loged_user():
-    # if 'loged_user' in s#s:
-    # user = mongo.db.users.find_one({"_id": ObjectId(s#s)}, {'password': 0})
-    favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
-    user['favoriteCharacters'] = favoriteCharacters
-    return json_util.dumps(user)
-    # else:
-    #     return jsonify({
-    #         'user': {}
-    #         })
+    user = get_logged_user(request)
+    if user:
+        favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
+        user['favoriteCharacters'] = favoriteCharacters
+        return json_util.dumps(user)
+    else:
+        return jsonify({
+            'user': {}
+            })
 
 @app.route('/logout')
 def logout():
-    # s#s.pop('loged_user', None)
-    return jsonify({'message': 'The user logged out'})
+    response = make_response('The user logged out')
+    response.delete_cookie('logged_user_id')
+    return response
 
 @app.route("/user/<id>", methods=['GET'])
 def getUser(id):
-    user = mongo.db.users.find_one({"_id": ObjectId(id)}, {'password': 0})
+    user = mongo.db.users.find_one({"_id": ObjectId(id)}, {'password': 0, 'type': 0})
     return json_util.dumps(user)
 
 @app.route("/user/<id>", methods=['PUT'])
@@ -100,21 +107,14 @@ def update_user(id):
 
     mongo.db.users.update_one({"_id": ObjectId(id)}, {"$set": {"username": user_username, "email": user_email, "pfpId": user_pfp_id, "HScore": user_HScore, "unlockByTheUser": user_unlocklByTheUser, "type": user_type}})
     user = mongo.db.users.find_one({"_id": ObjectId(id)})
-    #s#s ['loged_user'] = str(user['_id'])
 
     return json_util.dumps(user)
 
 @app.route("/users", methods = ["GET"])
 def get_users():
-    users_bson = mongo.db.users.find({}, {'password': 0, 'email': 0})
+    users_bson = mongo.db.users.find({}, {'password': 0, 'email': 0, 'type': 0})
     users = json_util.dumps(users_bson)
     return make_response(users, mimetype="application/json")
-
-@app.errorhandler(403)
-def forbidden(error = None):
-    response = make_response(jsonify({"message": "The csrf_token were not validated"}))
-    response.status_code = 403
-    return response
 
 @app.errorhandler(400)
 def bad_request(error = None):
