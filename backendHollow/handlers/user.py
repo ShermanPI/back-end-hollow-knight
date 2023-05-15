@@ -1,68 +1,68 @@
-from flask import make_response, request, jsonify, session
+from flask import make_response, request, jsonify
 from backendHollow import app, mongo, bcrypt
 from backendHollow.forms import RegistrationForm, LoginForm
 from bson import json_util
 from bson.objectid import ObjectId
+import datetime
+from backendHollow.routes import get_logged_user 
 
 
 @app.route("/register", methods = ["POST"])
 def register_user():
     form = RegistrationForm(request.form)
-    if(form.csrf_token.data == session["form_csrf_token"]):
-        if(form.validate_on_submit()):
-            username = form.username.data.strip()
-            email = form.email.data
-            hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
+    if(form.validate_on_submit()):
+        username = form.username.data.strip()
+        email = form.email.data
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
 
-            user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password, 'pfpId': 0, 'HScore': 0, 'unlockByTheUser': 0, 'type': "user", 'favoriteCharacters': []})
+        user = mongo.db.users.insert_one({'username': username, 'email': email, 'password': hashed_password, 'pfpId': 0, 'HScore': 0, 'unlockByTheUser': 0, 'type': "user", 'favoriteCharacters': []})
 
-            return jsonify({
-                    'message': f'Account for <span class="points-required">{form.username.data}</span> has been created... Now you can Log In',
-                    'userData': {
-                        'id': str(user.inserted_id), 
-                        'username': form.username.data
-                    }
-                })
-        else:
-            response = make_response(jsonify({'errors': form.errors}))
-            response.status_code = 409
-
-            return response, 409
+        return jsonify({
+                'message': f'Account for <span class="points-required">{form.username.data}</span> has been created... Now you can Log In',
+                'userData': {
+                    'id': str(user.inserted_id), 
+                    'username': form.username.data
+                }
+            })
     else:
-        return forbidden()
+        response = make_response(jsonify({'errors': form.errors}))
+        response.status_code = 409
+        return response, 409
     
 
 @app.route("/login", methods = ["POST"])
 def login_user():
     form = LoginForm(request.form)
-    if(form.csrf_token.data == session.get("form_csrf_token")):
-        if form.validate_on_submit():
-            user = mongo.db.users.find_one({'username': form.username.data})
+    if form.validate_on_submit():
+        user = mongo.db.users.find_one({'username': form.username.data})
 
-            if user and bcrypt.check_password_hash(user['password'], form.password.data):
-                user = mongo.db.users.find_one({'username': form.username.data}, {'password': 0})
-                if form.remember.data:
-                    session['loged_user'] = str(user['_id'])
+        if user and bcrypt.check_password_hash(user['password'], form.password.data):
+            del user['password']
+                
+            favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
+            user['favoriteCharacters'] = favoriteCharacters
+            response = make_response(json_util.dumps(user))
+            response.headers['Content-Type'] = 'application/json'
 
-                favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
-                user['favoriteCharacters'] = favoriteCharacters
-                return json_util.dumps(user)
+            if form.remember.data:
+                expires = datetime.datetime.now() + datetime.timedelta(days=31)
+                # mongo.db.users.update_one({'username': form.username.data}, {"$set":{'session': {'expires': expires}}}) trying to store all the session, is on HOLD and need a new collection named sessions 
+                response.set_cookie('logged_user_id', str(user['_id']), expires=expires, secure=True, httponly=False, samesite="None")
             
-            else:
-
-                response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
-                response.status_code = 401
-                return response
+            return response
+        
         else:
-            return bad_request()
+            response = make_response(jsonify({'errors': {'username': 'Login Unsusccesful. Please check username and password'}}))
+            response.status_code = 401
+            return response
     else:
-        return forbidden()
+        return bad_request()
 
 
 @app.route("/login", methods = ["GET"])
 def loged_user():
-    if 'loged_user' in session:
-        user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])}, {'password': 0})
+    user = get_logged_user(request)
+    if user:
         favoriteCharacters = [str(oid) for oid in user['favoriteCharacters']]
         user['favoriteCharacters'] = favoriteCharacters
         return json_util.dumps(user)
@@ -73,12 +73,13 @@ def loged_user():
 
 @app.route('/logout')
 def logout():
-    session.pop('loged_user', None)
-    return jsonify({'message': 'The user logged out'})
+    response = make_response({'message': 'The user logged out'})
+    response.delete_cookie('logged_user_id', secure=True, httponly=False, samesite="None")
+    return response
 
 @app.route("/user/<id>", methods=['GET'])
 def getUser(id):
-    user = mongo.db.users.find_one({"_id": ObjectId(id)}, {'password': 0})
+    user = mongo.db.users.find_one({"_id": ObjectId(id)}, {'password': 0, 'type': 0})
     return json_util.dumps(user)
 
 @app.route("/user/<id>", methods=['PUT'])
@@ -106,21 +107,14 @@ def update_user(id):
 
     mongo.db.users.update_one({"_id": ObjectId(id)}, {"$set": {"username": user_username, "email": user_email, "pfpId": user_pfp_id, "HScore": user_HScore, "unlockByTheUser": user_unlocklByTheUser, "type": user_type}})
     user = mongo.db.users.find_one({"_id": ObjectId(id)})
-    session['loged_user'] = session['loged_user'] = str(user['_id'])
 
     return json_util.dumps(user)
 
 @app.route("/users", methods = ["GET"])
 def get_users():
-    users_bson = mongo.db.users.find({}, {'password': 0, 'email': 0})
+    users_bson = mongo.db.users.find({}, {'password': 0, 'email': 0, 'type': 0})
     users = json_util.dumps(users_bson)
     return make_response(users, mimetype="application/json")
-
-@app.errorhandler(403)
-def forbidden(error = None):
-    response = make_response(jsonify({"message": "The csrf_token were not validated"}))
-    response.status_code = 403
-    return response
 
 @app.errorhandler(400)
 def bad_request(error = None):

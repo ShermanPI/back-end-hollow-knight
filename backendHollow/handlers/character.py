@@ -1,7 +1,8 @@
 import secrets
 import os
-from flask import make_response, request, jsonify, session, url_for
+from flask import make_response, request, jsonify, url_for
 from backendHollow import app, mongo
+from backendHollow.routes import get_logged_user
 from backendHollow.forms import createCharacterForm, editCharacterForm
 from bson import json_util
 from bson.objectid import ObjectId
@@ -35,8 +36,11 @@ def delete_picture(picture):
     if picture_blob.exists():
         picture_blob.delete()
 
-def isAdmin():
-    user = mongo.db.users.find_one({"_id": ObjectId(session['loged_user'])}, {'password': 0})
+def isAdmin(request):
+    user = get_logged_user(request)
+    if not user:
+        return None
+
     if user['type'] == 'admin':
         return True
     else:
@@ -46,34 +50,32 @@ def isAdmin():
 def addCharacter():
     form = createCharacterForm(request.form)
     
-    if(form.csrf_token.data == session.get("form_csrf_token") and isAdmin()):
+    if(isAdmin()):
         if(form.validate_on_submit()):
             picture_file = save_picture(request.files['characterImgSrc'])
 
             newCharacter = mongo.db.characters.insert_one({'characterName': form.characterName.data.strip(), 'characterMainInfo': form.characterMainInfo.data, 'characterSecondaryInfo': form.characterSecondaryInfo.data, 'characterImgSrc': picture_file})
             character = mongo.db.characters.find_one({'_id': ObjectId(newCharacter.inserted_id)})
-            # character['characterImgSrc'] = f"{url_for('static', filename='characters-images/')}{character['characterImgSrc']}"
             return json_util.dumps(character)
         else:
             response = make_response(jsonify({'errors': form.errors}))
             response.status_code = 409
-
             return response
     else:
         return forbidden()
 
 @app.route("/characters", methods = ['GET'])
 def getCharacters():
-    characters = mongo.db.characters.aggregate([{"$project": {"characterImgSrc": {"$concat": ["$characterImgSrc"]}, "_id": 1, "characterName": 1, "characterMainInfo": 1, "characterSecondaryInfo": 1}}])
-    response = json_util.dumps(characters)
-
-    return make_response(response)
+    characters = mongo.db.characters.find({})
+    response = make_response(json_util.dumps(characters))
+    response.headers['Content-Type'] = 'application/json'
+    return response
 
 @app.route("/character/<characterName>", methods = ['PUT'])
 def updateCharacter(characterName):
     form = editCharacterForm(request.form)
 
-    if(form.csrf_token.data == session.get("form_csrf_token") and isAdmin()):
+    if(isAdmin()):
         if(form.validate_on_submit()):
             new_character_info = {}
             character_to_edit = mongo.db.characters.find_one({'characterName': characterName})
@@ -151,7 +153,7 @@ def deleteCharacter(id):
 
 @app.errorhandler(403)
 def forbidden(error = None):
-    response = make_response(jsonify({"message": "The csrf_token were not validated"}))
+    response = make_response(jsonify({"message": "The server listened to the request, and will not do it"}))
     response.status_code = 403
     return response
 
