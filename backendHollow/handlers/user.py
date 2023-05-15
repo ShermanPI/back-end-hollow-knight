@@ -73,7 +73,7 @@ def loged_user():
 
 @app.route('/logout')
 def logout():
-    response = make_response('The user logged out')
+    response = make_response({'message': 'The user logged out'})
     response.delete_cookie('logged_user_id')
     return response
 
