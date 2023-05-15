@@ -45,8 +45,8 @@ def login_user():
             response.headers['Content-Type'] = 'application/json'
 
             if form.remember.data:
-                expires = datetime.datetime.now() + datetime.timedelta(minutes=10)
-                mongo.db.users.update_one({'username': form.username.data}, {"$set":{'session': {'expires': expires}}})
+                expires = datetime.datetime.now() + datetime.timedelta(days=31)
+                # mongo.db.users.update_one({'username': form.username.data}, {"$set":{'session': {'expires': expires}}}) trying to store all the session, is on HOLD and need a new collection named sessions 
                 response.set_cookie('logged_user_id', str(user['_id']), expires=expires, secure=True, httponly=False, samesite="None")
             
             return response
