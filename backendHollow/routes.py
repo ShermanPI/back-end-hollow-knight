@@ -11,10 +11,6 @@ def get_logged_user(request):
     else:
         return None
 
-@app.before_request
-def setup():
-    session.permanent = True
-
 @app.route("/csrf_token", methods = ["GET"])
 def csrf_token():
     token = secrets.token_hex(16)
