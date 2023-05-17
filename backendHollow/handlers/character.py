@@ -50,7 +50,7 @@ def isAdmin(request):
 def addCharacter():
     form = createCharacterForm(request.form)
     
-    if(isAdmin()):
+    if(isAdmin(request)):
         if(form.validate_on_submit()):
             picture_file = save_picture(request.files['characterImgSrc'])
 
@@ -75,7 +75,7 @@ def getCharacters():
 def updateCharacter(characterName):
     form = editCharacterForm(request.form)
 
-    if(isAdmin()):
+    if(isAdmin(request)):
         if(form.validate_on_submit()):
             new_character_info = {}
             character_to_edit = mongo.db.characters.find_one({'characterName': characterName})
@@ -137,7 +137,7 @@ def removeFavorite(userId, characterName):
 
 @app.route('/character/<id>', methods = ['DELETE'])
 def deleteCharacter(id):
-    if(isAdmin()):
+    if(isAdmin(request)):
         character_to_delete = mongo.db.characters.find_one({'_id': ObjectId(id)})
         if(character_to_delete):
             mongo.db.characters.delete_one({'_id': ObjectId(id)})
