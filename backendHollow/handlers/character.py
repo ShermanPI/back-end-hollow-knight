@@ -122,15 +122,15 @@ def getFavorites(userId):
 
 @app.route("/<userId>/favorite/<characterId>", methods = ['POST'])
 def addFavorite(userId, characterId):
-    favorite_character = mongo.db.characters.find_one({"_id": characterId})
-    mongo.db.users.update_one({'_id': ObjectId(userId)}, {'$push': {'favoriteCharacters': ObjectId(characterId)}})    
+    favorite_character = mongo.db.characters.find_one({"_id": ObjectId(characterId)})
+    mongo.db.users.update_one({'_id': ObjectId(userId)}, {'$push': {'favoriteCharacters': ObjectId(characterId)}})
     character_name = favorite_character['characterName']
     return jsonify({"message": F'{character_name} added as favorite'})
 
 @app.route("/<userId>/favorite/<characterId>", methods = ['DELETE'])
 def removeFavorite(userId, characterId):
-    favorite_character = mongo.db.characters.find_one({"_id": characterId})
-    mongo.db.users.update_one({'_id': ObjectId(userId)}, {'$pull': {'favoriteCharacters': ObjectId(characterId)}})    
+    favorite_character = mongo.db.characters.find_one({"_id": ObjectId(characterId)})
+    mongo.db.users.update_one({'_id': ObjectId(userId)}, {'$pull': {'favoriteCharacters': ObjectId(characterId)}})
     character_name = favorite_character['characterName']
     return jsonify({"message": F'{character_name} remove from favorites'})
 
